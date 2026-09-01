@@ -7,7 +7,7 @@ using SFA.DAS.FundingRuleValidation.Jobs.Domain;
 
 namespace SFA.DAS.FundingRuleValidation.Jobs.Orchestrators;
 
-public static partial class FundingRuleOrchestrator
+public partial class FundingRuleOrchestrator
 {
     [Function(nameof(ApplyFundingRules))]
     public static async Task ApplyFundingRules([OrchestrationTrigger] TaskOrchestrationContext context)
@@ -48,7 +48,7 @@ public static partial class FundingRuleOrchestrator
                 // send only the applicable data
                 var ruleCommand = command with { Courses = courses };
 
-                logger.LogRuleInvocation(rule.RuleName, courses.Select(x => x.Id));
+                LogRuleInvocation(logger, rule.RuleName, courses.Select(x => x.Id));
                 var outcomes = await context.CallActivityAsync<List<RuleCourseOutcome>>(rule.RuleName, new RuleData(rule, ruleCommand), GlobalConstants.TaskOptions);
                 if (outcomes is { Count: > 0 })
                 {
@@ -62,7 +62,7 @@ public static partial class FundingRuleOrchestrator
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Orchestrator failed");
+            logger.LogError(ex, "Learner validation failed");
             outputs = [];
         }
         
@@ -74,16 +74,14 @@ public static partial class FundingRuleOrchestrator
 
     private static void LogValidationComplete(ILogger logger, DateTime startTime, DateTime endTime)
     {
-        var duration = startTime - endTime;
+        var duration = endTime - startTime;
         using var _ = logger.BeginScope(new Dictionary<string, string>
         {
-            { "StartTime", $"{startTime:O}" },
-            { "EndTime", $"{endTime:O}" },
             { "Duration", $"{duration:G}" },
         });
-        logger.LogInformation("Learner validated");
+        logger.LogInformation("Learner validation complete");
     }
 
     [LoggerMessage(LogLevel.Information, "Calling {RuleName} with courses: {Courses}")]
-    static partial void LogRuleInvocation(this ILogger logger, string ruleName, IEnumerable<string> courses);
+    static partial void LogRuleInvocation(ILogger logger, string ruleName, IEnumerable<string> courses);
 }
