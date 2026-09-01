@@ -20,6 +20,7 @@ public static partial class FundingRuleOrchestrator
             { "WaitingInstanceId", command.WaitingInstanceId },
         });
 
+        var startTime = context.CurrentUtcDateTime;
         var status = ValidationStatus.SystemError;
         List<RuleCourseOutcome> outputs = [];
         try
@@ -68,6 +69,19 @@ public static partial class FundingRuleOrchestrator
         Finished:
         var result = new ValidateLearnerResult(command.CorrelationId, command.WaitingInstanceId, command.Ukprn, command.Uln, status, outputs);
         await context.CallActivityAsync(nameof(SendValidationResultActivity), result, GlobalConstants.TaskOptions);
+        LogValidationComplete(logger, startTime, context.CurrentUtcDateTime);
+    }
+
+    private static void LogValidationComplete(ILogger logger, DateTime startTime, DateTime endTime)
+    {
+        var duration = startTime - endTime;
+        using var _ = logger.BeginScope(new Dictionary<string, string>
+        {
+            { "StartTime", $"{startTime:O}" },
+            { "EndTime", $"{endTime:O}" },
+            { "Duration", $"{duration:G}" },
+        });
+        logger.LogInformation("Learner validated");
     }
 
     [LoggerMessage(LogLevel.Information, "Calling {RuleName} with courses: {Courses}")]
