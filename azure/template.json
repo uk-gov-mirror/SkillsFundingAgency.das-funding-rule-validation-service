@@ -363,6 +363,7 @@
             },
             "dependsOn": [
                 "[variables('resourceGroupName')]",
+                "[concat(parameters('subnetObject').name, '-', parameters('utcValue'))]",
                 "[concat(variables('functionAppName'), '-application-insights-', parameters('utcValue'))]",
                 "[concat(variables('storageAccountName'), '-', parameters('utcValue'))]"
             ]
